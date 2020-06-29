@@ -4,5 +4,19 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Dapper" Version="2.0.35" />
+      <PackageReference Include="dbup" Version="4.4.0" />
+      <PackageReference Include="dbup-sqlserver" Version="4.4.0" />
+      <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="SQLScripts\01-Tables.sql" />
+      <EmbeddedResource Include="SQLScripts\01-Tables.sql" />
+      <None Remove="SQLScripts\02-Sprocs.sql" />
+      <EmbeddedResource Include="SQLScripts\02-Sprocs.sql" />
+    </ItemGroup>
+
 
 </Project>

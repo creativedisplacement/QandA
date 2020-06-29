@@ -10,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using DbUp;
+using DbUp.SqlServer;
 
 namespace QAndA
 {
@@ -25,6 +27,22 @@ namespace QAndA
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            EnsureDatabase.For.SqlDatabase(connectionString);
+
+            var upgrader = DeployChanges.To
+                .SqlDatabase(connectionString, null)
+                .WithScriptsEmbeddedInAssembly(
+                    System.Reflection.Assembly.GetExecutingAssembly()
+                )
+                .WithTransaction()
+                .Build();
+            
+            if (upgrader.IsUpgradeRequired())
+            {
+                upgrader.PerformUpgrade();
+            }
+            
             services.AddControllers();
         }
 
