@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using QAndA.Data;
 using QAndA.Data.Models;
+using QAndA.Hubs;
 
 namespace QAndA.Controllers
 {
@@ -11,10 +13,12 @@ namespace QAndA.Controllers
     public class QuestionsController : ControllerBase
     {
         private readonly IDataRepository _dataRepository;
+        private readonly IHubContext<QuestionsHub> _questionHubContext;
 
-        public QuestionsController(IDataRepository dataRepository)
+        public QuestionsController(IDataRepository dataRepository, IHubContext<QuestionsHub> questionHubContext)
         {
             _dataRepository = dataRepository;
+            _questionHubContext = questionHubContext;
         }
 
         [HttpGet]
@@ -107,6 +111,10 @@ namespace QAndA.Controllers
                         Created = DateTime.UtcNow
                     }
                 );
+            
+            _questionHubContext.Clients.Group($"Question-{answerPostRequest.QuestionId.Value}")
+                .SendAsync("ReceiveQuestion", _dataRepository.GetQuestion(answerPostRequest.QuestionId.Value));
+            
             return savedAnswer;
         }
     }
