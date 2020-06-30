@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace QAndA.Data
+namespace QAndA.Data.Models
 {
     public class QuestionGetSingleResponse
     {

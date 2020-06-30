@@ -1,17 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Reflection;
+using DbUp;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using DbUp;
-using DbUp.SqlServer;
+using QAndA.Data;
 
 namespace QAndA
 {
@@ -33,7 +27,7 @@ namespace QAndA
             var upgrader = DeployChanges.To
                 .SqlDatabase(connectionString, null)
                 .WithScriptsEmbeddedInAssembly(
-                    System.Reflection.Assembly.GetExecutingAssembly()
+                    Assembly.GetExecutingAssembly()
                 )
                 .WithTransaction()
                 .Build();
@@ -44,6 +38,7 @@ namespace QAndA
             }
             
             services.AddControllers();
+            services.AddScoped<IDataRepository, DataRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
