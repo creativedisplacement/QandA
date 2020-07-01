@@ -1,10 +1,16 @@
 using System.Reflection;
 using DbUp;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Logging;
+using QandA.Authorization;
+using QAndA.Authorization;
 using QAndA.Data;
 using QAndA.Hubs;
 
@@ -22,6 +28,7 @@ namespace QAndA
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            IdentityModelEventSource.ShowPII = true;
             var connectionString = Configuration.GetConnectionString("DefaultConnection");
             EnsureDatabase.For.SqlDatabase(connectionString);
 
@@ -49,6 +56,25 @@ namespace QAndA
             services.AddSignalR();
             services.AddMemoryCache();
             services.AddSingleton<IQuestionCache, QuestionCache>();
+
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme =
+                    JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme =
+                    JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.Authority = Configuration["Auth0:Authority"];
+                options.Audience = Configuration["Auth0:Audience"];
+            });
+            services.AddHttpClient();
+            services.AddAuthorization(options =>
+                options.AddPolicy("MustBeQuestionAuthor", policy =>
+                    policy.Requirements.Add(new MustBeQuestionAuthorRequirement())));
+            
+            services.AddScoped<IAuthorizationHandler, MustBeQuestionAuthorHandler>();
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -61,7 +87,7 @@ namespace QAndA
                 app.UseHttpsRedirection();
 
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

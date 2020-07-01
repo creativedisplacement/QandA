@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using QAndA.Data;
 using QAndA.Data.Models;
 using QAndA.Hubs;
@@ -16,13 +22,20 @@ namespace QAndA.Controllers
         private readonly IQuestionCache _cache;
         private readonly IDataRepository _dataRepository;
         private readonly IHubContext<QuestionsHub> _questionHubContext;
+        private readonly IHttpClientFactory _clientFactory;
+        private readonly string _auth0UserInfo;
 
-        public QuestionsController(IDataRepository dataRepository, IHubContext<QuestionsHub> questionHubContext,
-            IQuestionCache cache)
+        public QuestionsController(IDataRepository dataRepository,
+            IHubContext<QuestionsHub> questionHubContext,
+            IQuestionCache cache,
+            IHttpClientFactory clientFactory,
+            IConfiguration configuration)
         {
             _dataRepository = dataRepository;
             _questionHubContext = questionHubContext;
             _cache = cache;
+            _clientFactory = clientFactory;
+            _auth0UserInfo = $"{configuration["Auth0:Authority"]}userinfo";
         }
 
         [HttpGet]
@@ -59,6 +72,7 @@ namespace QAndA.Controllers
             return question;
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<QuestionGetSingleResponse>> PostQuestion(QuestionPostRequest questionPostRequest)
         {
@@ -66,13 +80,14 @@ namespace QAndA.Controllers
             {
                 Title = questionPostRequest.Title,
                 Content = questionPostRequest.Content,
-                UserId = "1",
-                UserName = "bob.test@test.com",
+                UserId = User.FindFirst(ClaimTypes.NameIdentifier).Value,
+                UserName = await GetUserName(),
                 Created = DateTime.UtcNow
             });
             return CreatedAtAction(nameof(GetQuestion), new {questionId = savedQuestion.QuestionId}, savedQuestion);
         }
 
+        [Authorize(Policy = "MustBeQuestionAuthor")]
         [HttpPut("{questionId}")]
         public async Task<ActionResult<QuestionGetSingleResponse>> PutQuestion(int questionId,
             QuestionPutRequest questionPutRequest)
@@ -94,6 +109,7 @@ namespace QAndA.Controllers
             return savedQuestion;
         }
 
+        [Authorize(Policy = "MustBeQuestionAuthor")]
         [HttpDelete("{questionId}")]
         public async Task<ActionResult> DeleteQuestion(int questionId)
         {
@@ -107,6 +123,7 @@ namespace QAndA.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("answer")]
         public async Task<ActionResult<AnswerGetResponse>> PostAnswer(AnswerPostRequest answerPostRequest)
         {
@@ -117,8 +134,8 @@ namespace QAndA.Controllers
                 {
                     QuestionId = answerPostRequest.QuestionId.Value,
                     Content = answerPostRequest.Content,
-                    UserId = "1",
-                    UserName = "bob.test@test.com",
+                    UserId = User.FindFirst(ClaimTypes.NameIdentifier).Value,
+                    UserName = await GetUserName(),
                     Created = DateTime.UtcNow
                 }
             );
@@ -129,6 +146,27 @@ namespace QAndA.Controllers
                 .SendAsync("ReceiveQuestion", _dataRepository.GetQuestion(answerPostRequest.QuestionId.Value));
 
             return savedAnswer;
+        }
+
+        private async Task<string> GetUserName()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, _auth0UserInfo);
+            request.Headers.Add("Authorization", Request.Headers["Authorization"].First());
+            var client = _clientFactory.CreateClient();
+            var response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var user = JsonSerializer.Deserialize<User>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return user.Name;
+            }
+            else
+            {
+                return "";
+            }
         }
     }
 }
