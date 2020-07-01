@@ -32,12 +32,9 @@ namespace QAndA
                 )
                 .WithTransaction()
                 .Build();
-            
-            if (upgrader.IsUpgradeRequired())
-            {
-                upgrader.PerformUpgrade();
-            }
-            
+
+            if (upgrader.IsUpgradeRequired()) upgrader.PerformUpgrade();
+
             services.AddControllers();
             services.AddScoped<IDataRepository, DataRepository>();
             services.AddCors(options =>
@@ -48,8 +45,10 @@ namespace QAndA
                     .WithOrigins("http://localhost:3000")
                     .AllowCredentials());
             });
-            
+
             services.AddSignalR();
+            services.AddMemoryCache();
+            services.AddSingleton<IQuestionCache, QuestionCache>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -57,13 +56,9 @@ namespace QAndA
         {
             app.UseCors("CorsPolicy");
             if (env.IsDevelopment())
-            {
                 app.UseDeveloperExceptionPage();
-            }
             else
-            {
                 app.UseHttpsRedirection();
-            }
 
             app.UseRouting();
 
