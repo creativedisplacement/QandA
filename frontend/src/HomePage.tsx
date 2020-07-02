@@ -61,7 +61,6 @@ const HomePage: FC<Props> = ({
             </PrimaryButton>
           )}
         </div>
-        )}
         {questionsLoading ? (
           <div
             css={css`
