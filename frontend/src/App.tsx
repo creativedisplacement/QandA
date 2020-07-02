@@ -11,7 +11,6 @@ import { SearchPage } from './SearchPage';
 import { SignInPage } from './SignInPage';
 import { NotFoundPage } from './NotFoundPage';
 import { QuestionPage } from './QuestionPage';
-import { Question } from './Question';
 import { SignOutPage } from './SignOutPage';
 import { AuthProvider } from './Auth';
 import { AuthorizedPage } from './AuthorisedPage';

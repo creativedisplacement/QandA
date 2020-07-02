@@ -2,7 +2,7 @@ import React from 'react';
 import { useEffect, FC } from 'react';
 /** @jsx jsx */
 import { css, jsx } from '@emotion/core';
-import { PrimaryButton, fontSize } from './Styles';
+import { PrimaryButton } from './Styles';
 import { QuestionList } from './QuestionList';
 import { QuestionData } from './QuestionsData';
 import { Page } from './Page';
